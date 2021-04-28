@@ -29,33 +29,33 @@ if (!empty($request)) {
         $error[] = "Invalid Platform";
         $response['data'] = [];
     }
-    
-    if (empty($request->receipt_data)) {
-        $valErr = true;
-        $response['is_error'] = 1;
-        $response['subscription_status'] = 0;
-        $error[] = "Missing Receipt Data";
-        $response['data'] = [];
-    }
 
-    if (empty($request->env)) {
-        $valErr = true;
-        $response['is_error'] = 1;
-        $response['subscription_status'] = 0;
-        $error[] = "Missing Environment";
-        $response['data'] = [];
-    } else if (!in_array($request->env, $__ENV)) {
-        $valErr = true;
-        $response['is_error'] = 1;
-        $response['subscription_status'] = 0;
-        $error[] = "Invalid Environment";
-        $response['data'] = [];
-    }
-    
-    if (!$valErr) {
+    // CODE FOR APPLE PLATFORM
+    if ($request->platform == 'IOS') {
 
-        // CODE FOR APPLE PLATFORM
-        if ($request->platform == 'IOS') {
+        if (empty($request->receipt_data)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Receipt Data";
+            $response['data'] = [];
+        }
+
+        if (empty($request->env)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Environment";
+            $response['data'] = [];
+        } else if (!in_array($request->env, $__ENV)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Invalid Environment";
+            $response['data'] = [];
+        }
+
+        if (!$valErr) {
             $payLoad = [];
             $payLoad['receipt-data'] = $request->receipt_data;
             $payLoad['password'] = $__SECRET;
@@ -94,19 +94,101 @@ if (!empty($request)) {
                 $response['error'] = ["Apps store failed to response."];
                 $response['data'] = [];
             }
-        } else if ($request->platform == 'ANDROID') {
-            // CODE FOR GOOGLE PLATFORM
+        } else {
             $response['is_error'] = 1;
             $response['subscription_status'] = 0;
-            $response['error'] = ["Play store failed to response."];
+            $response['error'] = $error;
+            $response['data'] = [];
+        }
+        
+    // CODE FOR GOOGLE PLATFORM
+    } else if ($request->platform == 'ANDROID') {
+
+        if (empty($request->package_name)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Package Name";
             $response['data'] = [];
         }
 
-    } else {
-        $response['is_error'] = 1;
-        $response['subscription_status'] = 0;
-        $response['error'] = $error;
-        $response['data'] = [];
+        if (empty($request->product_id)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Product ID";
+            $response['data'] = [];
+        }
+
+        if (empty($request->token)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Token";
+            $response['data'] = [];
+        }
+
+        if (empty($request->access_token)) {
+            $valErr = true;
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $error[] = "Missing Access Token";
+            $response['data'] = [];
+        }
+
+        if (!$valErr) {
+
+            $payLoad = [];
+            $payLoad['packageName'] = $request->package_name;
+            $payLoad['productId'] = $request->product_id;
+            $payLoad['token'] = $request->token;
+
+            $header[] = 'Authorization: Bearer '. $request->access_token;
+            $header[] = 'Content-Type: application/json';
+
+            $jsonPayload = json_encode($payLoad);
+
+            // $ch = curl_init($__PURCHASE_VERIFY_URL . $request->package_name . '/purchases/products/' . $request->product_id . '/tokens/' . $request->token . '?key=AIzaSyAa8yy0GdcGPHdtD083HiGGx_S0vMPScDM');
+            $ch = curl_init($__PURCHASE_VERIFY_URL . $request->package_name . '/purchases/products/' . $request->product_id . '/tokens/' . $request->token);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+            $result = curl_exec($ch);
+            curl_close($ch);
+            $result = json_decode($result);
+            
+            if (!empty($result)) {
+                if (isset($result->purchaseState)) {
+                    if ($result->purchaseState == 0) {
+                        $response['is_error'] = 0;
+                        $response['subscription_status'] = 1;
+                        $response['error'] = [];
+                        $response['data'] = $result;
+                    } else {
+                        $response['is_error'] = 0;
+                        $response['subscription_status'] = 0;
+                        $response['error'] = [];
+                        $response['data'] = $result;
+                    }
+                } else {
+                    $response['is_error'] = 0;
+                    $response['subscription_status'] = 0;
+                    $response['error'] = [];
+                    $response['data'] = $result;
+                }
+            } else {
+                $response['is_error'] = 1;
+                $response['subscription_status'] = 0;
+                $response['error'] = ["Apps store failed to response."];
+                $response['data'] = [];
+            }
+
+        } else {
+            $response['is_error'] = 1;
+            $response['subscription_status'] = 0;
+            $response['error'] = $error;
+            $response['data'] = [];
+        }
     }
     
 } else {
