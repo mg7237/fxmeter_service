@@ -41,19 +41,19 @@ if (!empty($request)) {
             $response['data'] = [];
         }
 
-        if (empty($request->env)) {
-            $valErr = true;
-            $response['is_error'] = 1;
-            $response['subscription_status'] = 0;
-            $error[] = "Missing Environment";
-            $response['data'] = [];
-        } else if (!in_array($request->env, $__ENV)) {
-            $valErr = true;
-            $response['is_error'] = 1;
-            $response['subscription_status'] = 0;
-            $error[] = "Invalid Environment";
-            $response['data'] = [];
-        }
+        // if (empty($request->env)) {
+        //     $valErr = true;
+        //     $response['is_error'] = 1;
+        //     $response['subscription_status'] = 0;
+        //     $error[] = "Missing Environment";
+        //     $response['data'] = [];
+        // } else if (!in_array($request->env, $__ENV)) {
+        //     $valErr = true;
+        //     $response['is_error'] = 1;
+        //     $response['subscription_status'] = 0;
+        //     $error[] = "Invalid Environment";
+        //     $response['data'] = [];
+        // }
 
         if (!$valErr) {
             $payLoad = [];
@@ -63,7 +63,8 @@ if (!empty($request)) {
 
             $jsonPayload = json_encode($payLoad);
 
-            $ch = curl_init($__RECEIPT_VERIFY_URL[$request->env]);
+            // $ch = curl_init($__RECEIPT_VERIFY_URL[$request->env]);
+            $ch = curl_init($__RECEIPT_VERIFY_URL['PROD']);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -74,19 +75,54 @@ if (!empty($request)) {
             $result = json_decode($result);
             
             if (!empty($result)) {
-                $currentTime = time();
-                $currentTime = $currentTime * 1000;
-                $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
-                if ($expireDate >= $currentTime) {
-                    $response['is_error'] = 0;
-                    $response['subscription_status'] = 1;
-                    $response['error'] = [];
-                    $response['data'] = $result;
+                if ($result->status == 21007) {
+                    $ch = curl_init($__RECEIPT_VERIFY_URL['TEST']);
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+
+                    $result = curl_exec($ch);
+                    curl_close($ch);
+                    $result = json_decode($result);
+
+                    if (!empty($result)) {
+                        $currentTime = time();
+                        $currentTime = $currentTime * 1000;
+                        $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
+                        if ($expireDate >= $currentTime) {
+                            $response['is_error'] = 0;
+                            $response['subscription_status'] = 1;
+                            $response['error'] = [];
+                            $response['data'] = $result;
+                        } else {
+                            $response['is_error'] = 0;
+                            $response['subscription_status'] = 0;
+                            $response['error'] = [];
+                            $response['data'] = $result;
+                        }
+                    } else {
+                        $response['is_error'] = 1;
+                        $response['subscription_status'] = 0;
+                        $response['error'] = ["Apps store failed to response."];
+                        $response['data'] = [];
+                    }
+                    
                 } else {
-                    $response['is_error'] = 0;
-                    $response['subscription_status'] = 0;
-                    $response['error'] = [];
-                    $response['data'] = $result;
+                    $currentTime = time();
+                    $currentTime = $currentTime * 1000;
+                    $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
+                    if ($expireDate >= $currentTime) {
+                        $response['is_error'] = 0;
+                        $response['subscription_status'] = 1;
+                        $response['error'] = [];
+                        $response['data'] = $result;
+                    } else {
+                        $response['is_error'] = 0;
+                        $response['subscription_status'] = 0;
+                        $response['error'] = [];
+                        $response['data'] = $result;
+                    }
                 }
             } else {
                 $response['is_error'] = 1;
