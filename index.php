@@ -89,6 +89,37 @@ if (!empty($request)) {
                     if (!empty($result)) {
                         $currentTime = time();
                         $currentTime = $currentTime * 1000;
+                        if (!empty($result->latest_receipt_info[0]->expires_date_ms)) {
+                            $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
+                            if ($expireDate >= $currentTime) {
+                                $response['is_error'] = 0;
+                                $response['subscription_status'] = 1;
+                                $response['error'] = [];
+                                $response['data'] = $result;
+                            } else {
+                                $response['is_error'] = 0;
+                                $response['subscription_status'] = 0;
+                                $response['error'] = [];
+                                $response['data'] = $result;
+                            }
+                        } else {
+                            $response['is_error'] = 1;
+                            $response['subscription_status'] = 0;
+                            $response['error'] = [$result->status];
+                            $response['data'] = $result;
+                        }
+                        
+                    } else {
+                        $response['is_error'] = 1;
+                        $response['subscription_status'] = 0;
+                        $response['error'] = ["Apps store failed to response."];
+                        $response['data'] = [];
+                    }
+
+                } else {
+                    $currentTime = time();
+                    $currentTime = $currentTime * 1000;
+                    if (!empty($result->latest_receipt_info[0]->expires_date_ms)) {
                         $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
                         if ($expireDate >= $currentTime) {
                             $response['is_error'] = 0;
@@ -104,23 +135,7 @@ if (!empty($request)) {
                     } else {
                         $response['is_error'] = 1;
                         $response['subscription_status'] = 0;
-                        $response['error'] = ["Apps store failed to response."];
-                        $response['data'] = [];
-                    }
-                    
-                } else {
-                    $currentTime = time();
-                    $currentTime = $currentTime * 1000;
-                    $expireDate = (int) $result->latest_receipt_info[0]->expires_date_ms;
-                    if ($expireDate >= $currentTime) {
-                        $response['is_error'] = 0;
-                        $response['subscription_status'] = 1;
-                        $response['error'] = [];
-                        $response['data'] = $result;
-                    } else {
-                        $response['is_error'] = 0;
-                        $response['subscription_status'] = 0;
-                        $response['error'] = [];
+                        $response['error'] = [$result->status];
                         $response['data'] = $result;
                     }
                 }
